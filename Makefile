@@ -1,5 +1,9 @@
 .DEFAULT_GOAL := help
 
+# Define variables for repeated commands
+DOCKER_COMPOSE = docker compose
+APP_NAME = app
+
 .PHONY: help
 help:  ## Show this help.
 	@grep -E '^\S+:.*?## .*$$' $(firstword $(MAKEFILE_LIST)) | \
@@ -7,39 +11,48 @@ help:  ## Show this help.
 
 .PHONY: build
 build: ## Build the docker image
-	docker compose build
+	$(DOCKER_COMPOSE) build
 
 .PHONY: up
 up: ## Run the docker container
-	docker compose up -d
+	$(DOCKER_COMPOSE) up -d
 
 .PHONY: down
 down: ## Stop the docker container
-	docker compose down
+	$(DOCKER_COMPOSE) down
 
 .PHONY: add
 add: ## Add package to the project ex: make add package=XX
-	docker compose run --rm --no-deps app uv add $(package)
+	$(DOCKER_COMPOSE) run --rm --no-deps $(APP_NAME) uv add $(package)
 	make build
 
 .PHONY: add-dev
 add-dev: ## Add dev package to the project ex: make add-dev package=XX
-	docker compose run --rm --no-deps app uv add --dev $(package)
+	$(DOCKER_COMPOSE) run --rm --no-deps $(APP_NAME) uv add --dev $(package)
 	make build
 
 .PHONY: test-unit
 test-unit: ## Run unit tests
-	docker compose run --rm app uv run pytest test/unit -ra
+	$(DOCKER_COMPOSE) run --rm $(APP_NAME) uv run pytest test/unit -ra
 
 .PHONY: test-integration
 test-integration: ## Run integration tests
-	docker compose run --rm app uv run pytest test/integration -ra
+	$(DOCKER_COMPOSE) run --rm $(APP_NAME) uv run pytest test/integration -ra
 
 .PHONY: test-acceptance
 test-acceptance: ## Run acceptance tests
-	docker compose run --rm app uv run pytest test/acceptance -ra
+	$(DOCKER_COMPOSE) run --rm $(APP_NAME) uv run pytest test/acceptance -ra
 
 .PHONY: test
 test: test-unit
 #  test-integration test-acceptance ## Run tests
 
+.PHONY: coverage
+coverage: ## Run coverage
+	$(DOCKER_COMPOSE) run --rm $(APP_NAME) sh -c "\
+		rm -f .coverage && \
+		coverage run --branch -m pytest test && \
+		coverage report -m && \
+		coverage html --directory coverage && \
+		coverage json && mv coverage.json coverage/coverage.json && \
+		coverage xml && mv coverage.xml coverage/coverage.xml"
